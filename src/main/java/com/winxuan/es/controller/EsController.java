@@ -140,6 +140,7 @@ public class EsController {
 
     /**
      * 分组统计每个应用的调用次数,成功次数,失败次数
+     *
      * @return
      */
     @RequestMapping("/group")
@@ -154,30 +155,30 @@ public class EsController {
         System.out.println(sv.toString());
         SearchResponse response = sv.get();
         Map<String, Aggregation> stringAggregationMap = response.getAggregations().asMap();
-        StringTerms terms = (StringTerms)stringAggregationMap.get("appKeyCount");
+        StringTerms terms = (StringTerms) stringAggregationMap.get("appKeyCount");
         Iterator<Bucket> countBucketIt = terms.getBuckets().iterator();
-        while(countBucketIt.hasNext()){
+        while (countBucketIt.hasNext()) {
             Bucket countBucket = countBucketIt.next();
             Map<String, Aggregation> successAggregationMap = countBucket.getAggregations().asMap();
             LongTerms successCountTerms = (LongTerms) successAggregationMap.get("successCount");
             Iterator<LongTerms.Bucket> successBucketIt = successCountTerms.getBuckets().iterator();
-            long trueCount = 0L,falseCount = 0L;
-            while(successBucketIt.hasNext()){
+            long trueCount = 0L, falseCount = 0L;
+            while (successBucketIt.hasNext()) {
                 LongTerms.Bucket successBucket = successBucketIt.next();
-                if (successBucket.getKeyAsString().equals("true")){
+                if (successBucket.getKeyAsString().equals("true")) {
                     trueCount = successBucket.getDocCount();
                 }
-                if (successBucket.getKeyAsString().equals("false")){
+                if (successBucket.getKeyAsString().equals("false")) {
                     falseCount = successBucket.getDocCount();
                 }
             }
-            System.out.println(countBucket.getKey() + "应用调用总次数:" + countBucket.getDocCount() +"次,成功:"+trueCount+"次,失败:"+falseCount+"次;");
+            System.out.println(countBucket.getKey() + "应用调用总次数:" + countBucket.getDocCount() + "次,成功:" + trueCount + "次,失败:" + falseCount + "次;");
         }
         return new ResponseEntity(null, HttpStatus.OK);
     }
 
     @RequestMapping("/gropbyapi")
-    public ResponseEntity gropByAPI(){
+    public ResponseEntity gropByAPI() {
         SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-27").setTypes("doc");
         AggregationBuilder appKeyBuilder = AggregationBuilders.terms("appKeyCount").field("body.appKey.keyword")
                 .size(10000);
@@ -188,31 +189,31 @@ public class EsController {
         sv.addAggregation(appKeyBuilder.subAggregation(methodBuilder.subAggregation(successBuilder)).subAggregation(successBuilder));
         SearchResponse response = sv.get();
         Map<String, Aggregation> stringAggregationMap = response.getAggregations().asMap();
-        StringTerms terms = (StringTerms)stringAggregationMap.get("appKeyCount");
+        StringTerms terms = (StringTerms) stringAggregationMap.get("appKeyCount");
         Iterator<Bucket> countBucketIt = terms.getBuckets().iterator();
         List<AppCountDetail> appCountDetails = new ArrayList<AppCountDetail>();
-        while(countBucketIt.hasNext()){
+        while (countBucketIt.hasNext()) {
             Bucket countBucket = countBucketIt.next();
-            System.out.println("应用:"+countBucket.getKey()+"调用总次数:"+countBucket.getDocCount());
+            System.out.println("应用:" + countBucket.getKey() + "调用总次数:" + countBucket.getDocCount());
             Map<String, Aggregation> methodAggregation = countBucket.getAggregations().asMap();
 
             LongTerms successCountTerms = (LongTerms) methodAggregation.get("successCount");
             Iterator<LongTerms.Bucket> successBucketIt = successCountTerms.getBuckets().iterator();
-            long trueTotalCount = 0L,falseTotalCount = 0L;
-            while(successBucketIt.hasNext()){
+            long trueTotalCount = 0L, falseTotalCount = 0L;
+            while (successBucketIt.hasNext()) {
                 LongTerms.Bucket successBucket = successBucketIt.next();
-                if (successBucket.getKeyAsString().equals("true")){
+                if (successBucket.getKeyAsString().equals("true")) {
                     trueTotalCount = successBucket.getDocCount();
                 }
-                if (successBucket.getKeyAsString().equals("false")){
+                if (successBucket.getKeyAsString().equals("false")) {
                     falseTotalCount = successBucket.getDocCount();
                 }
             }
-            System.out.println("总成功:"+trueTotalCount+",总失败:"+falseTotalCount);
-            StringTerms methodTerms = (StringTerms)methodAggregation.get("methodCount");
+            System.out.println("总成功:" + trueTotalCount + ",总失败:" + falseTotalCount);
+            StringTerms methodTerms = (StringTerms) methodAggregation.get("methodCount");
             Iterator<Bucket> methodBucketlt = methodTerms.getBuckets().iterator();
             AppCountDetail detail = null;
-            while (methodBucketlt.hasNext()){
+            while (methodBucketlt.hasNext()) {
                 Bucket methodBucket = methodBucketlt.next();
                 detail = new AppCountDetail();
                 detail.setAppKey(String.valueOf(countBucket.getKey()));
@@ -225,21 +226,21 @@ public class EsController {
                 Map<String, Aggregation> successAggregationMap = methodBucket.getAggregations().asMap();
                 LongTerms methodSuccessCountTerms = (LongTerms) successAggregationMap.get("successCount");
                 Iterator<LongTerms.Bucket> methodSuccessBucketIt = methodSuccessCountTerms.getBuckets().iterator();
-                long trueCount = 0L,falseCount = 0L;
-                while(methodSuccessBucketIt.hasNext()){
+                long trueCount = 0L, falseCount = 0L;
+                while (methodSuccessBucketIt.hasNext()) {
                     LongTerms.Bucket methodSuccessBucket = methodSuccessBucketIt.next();
-                    if (methodSuccessBucket.getKeyAsString().equals("true")){
+                    if (methodSuccessBucket.getKeyAsString().equals("true")) {
                         trueCount = methodSuccessBucket.getDocCount();
                         detail.setMethodSuccessed(trueCount);
                     }
-                    if (methodSuccessBucket.getKeyAsString().equals("false")){
+                    if (methodSuccessBucket.getKeyAsString().equals("false")) {
                         falseCount = methodSuccessBucket.getDocCount();
                         detail.setMethodFailed(falseCount);
                     }
                 }
                 appCountDetails.add(detail);
-                System.out.println("应用:"+countBucket.getKey()+"调用API:"+methodBucket.getKey()+";总次数:"+methodBucket.getDocCount()
-                +",成功:"+trueCount+";失败:"+falseCount);
+                System.out.println("应用:" + countBucket.getKey() + "调用API:" + methodBucket.getKey() + ";总次数:" + methodBucket.getDocCount()
+                        + ",成功:" + trueCount + ";失败:" + falseCount);
             }
         }
         return new ResponseEntity(appCountDetails, HttpStatus.OK);
@@ -247,10 +248,11 @@ public class EsController {
 
     /**
      * 按异常分组查询
+     *
      * @return
      */
     @RequestMapping("/groupByExc")
-    public ResponseEntity groupByExc(){
+    public ResponseEntity groupByExc() {
         SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-27").setTypes("doc");
         AggregationBuilder appKeyBuilder = AggregationBuilders.terms("appKeyCount").field("body.appKey.keyword")
                 .size(10000);
@@ -261,26 +263,26 @@ public class EsController {
         sv.addAggregation(appKeyBuilder.subAggregation(methodBuilder.subAggregation(exceptionTypeBuilder)));
         SearchResponse response = sv.get();
         Map<String, Aggregation> asMap = response.getAggregations().asMap();
-        StringTerms terms = (StringTerms)asMap.get("appKeyCount");
+        StringTerms terms = (StringTerms) asMap.get("appKeyCount");
         Iterator<Bucket> appKeyCountlt = terms.getBuckets().iterator();
         List<AppExceptionCountDetail> details = new ArrayList<AppExceptionCountDetail>();
-        while (appKeyCountlt.hasNext()){
+        while (appKeyCountlt.hasNext()) {
             Bucket appKeyBucket = appKeyCountlt.next();
             Map<String, Aggregation> methodAggregationMap = appKeyBucket.getAggregations().asMap();
-            StringTerms methodTerms = (StringTerms)methodAggregationMap.get("methodCount");
+            StringTerms methodTerms = (StringTerms) methodAggregationMap.get("methodCount");
             Iterator<Bucket> methodBucketlt = methodTerms.getBuckets().iterator();
-            while (methodBucketlt.hasNext()){
+            while (methodBucketlt.hasNext()) {
                 Bucket methodBucket = methodBucketlt.next();
                 Map<String, Aggregation> exceptionTypeMap = methodBucket.getAggregations().asMap();
-                StringTerms exceptionTypeTerms = (StringTerms)exceptionTypeMap.get("exceptionTypeCount");
+                StringTerms exceptionTypeTerms = (StringTerms) exceptionTypeMap.get("exceptionTypeCount");
                 Iterator<Bucket> exceptionTypeIterator = exceptionTypeTerms.getBuckets().iterator();
                 AppExceptionCountDetail detail = null;
-                while (exceptionTypeIterator.hasNext()){
+                while (exceptionTypeIterator.hasNext()) {
                     detail = new AppExceptionCountDetail();
                     Bucket exceptionBucket = exceptionTypeIterator.next();
-                    System.out.println("应用:"+appKeyBucket.getKey()
-                    +",方法:"+methodBucket.getKey()+",异常类型:"+exceptionBucket.getKey()
-                            +",次数:"+exceptionBucket.getDocCount());
+                    System.out.println("应用:" + appKeyBucket.getKey()
+                            + ",方法:" + methodBucket.getKey() + ",异常类型:" + exceptionBucket.getKey()
+                            + ",次数:" + exceptionBucket.getDocCount());
                     detail.setAppKey(String.valueOf(appKeyBucket.getKey()));
                     detail.setMethod(String.valueOf(methodBucket.getKey()));
                     detail.setExceptionType(String.valueOf(exceptionBucket.getKey()));
@@ -290,6 +292,54 @@ public class EsController {
             }
         }
         return new ResponseEntity(details, HttpStatus.OK);
+    }
+
+    /**
+     * 所有调用量统计,失败+成功
+     * @return
+     */
+    @RequestMapping("/appTotal")
+    public ResponseEntity appTotal() {
+        SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-27").setTypes("doc");
+        AggregationBuilder successBuilder = AggregationBuilders.terms("successCount").field("body.success")
+                .size(2);
+        sv.addAggregation(successBuilder);
+        SearchResponse response = sv.get();
+        Map<String, Aggregation> totalMap = response.getAggregations().asMap();
+        LongTerms methodSuccessCountTerms = (LongTerms) totalMap.get("successCount");
+        Iterator<LongTerms.Bucket> bucketIterator = methodSuccessCountTerms.getBuckets().iterator();
+        long trueCount = 0L, falseCount = 0L;
+        while (bucketIterator.hasNext()) {
+            LongTerms.Bucket next = bucketIterator.next();
+            if (next.getKeyAsString().equals("true")) {
+                trueCount = next.getDocCount();
+            }
+            if (next.getKeyAsString().equals("false")) {
+                falseCount = next.getDocCount();
+            }
+        }
+        System.out.println("总次数:"+(trueCount + falseCount)+",成功:"+trueCount+",失败:"+falseCount);
+        return new ResponseEntity(null, HttpStatus.OK);
+    }
+
+    /**
+     * 所有异常次数统计
+     * @return
+     */
+    @RequestMapping("/appException")
+    public ResponseEntity appException() {
+        SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-27").setTypes("doc");
+        AggregationBuilder exceptionTypeBuilder = AggregationBuilders.terms("exceptionTypeCount").field("body.exceptionType.keyword")
+                .size(10000);
+        sv.addAggregation(exceptionTypeBuilder);
+        SearchResponse response = sv.get();
+        Map<String, Aggregation> totalMap = response.getAggregations().asMap();
+        StringTerms exceptionTypeTerms = (StringTerms) totalMap.get("exceptionTypeCount");
+        Iterator<Bucket> exceptionTypeIterator = exceptionTypeTerms.getBuckets().iterator();
+        while (exceptionTypeIterator.hasNext()) {
+            Bucket exceptionBucket = exceptionTypeIterator.next();
+            System.out.println("异常类型:" + exceptionBucket.getKey()+ ",次数:" + exceptionBucket.getDocCount()); }
+        return new ResponseEntity(null, HttpStatus.OK);
     }
 
 }
