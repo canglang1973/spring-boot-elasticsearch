@@ -2,6 +2,7 @@ package com.winxuan.es.controller;
 
 import com.winxuan.es.model.AppCountDetail;
 import com.winxuan.es.model.AppExceptionCountDetail;
+import com.winxuan.es.utils.DateUtils;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchRequest;
@@ -11,6 +12,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.Aggregation;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -85,12 +88,20 @@ public class EsController {
      * @throws IOException
      */
     @RequestMapping("/search2")
-    public ResponseEntity search2(int from, int size) throws IOException {
+    public ResponseEntity search2(int from, int size) throws Exception {
         QueryBuilder qb = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termQuery("body.appKey", "100071"));
-//                .must(QueryBuilders.termQuery("created", "2018-09-26T03:35:19.000+0000"));
-        SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-26")
+                .must(QueryBuilders.termQuery("body.appKey", "100052"))
+                .must(QueryBuilders.rangeQuery("created")
+                        .from(DateUtils.dateCSTToUTCString(SimpleDateFormat.getDateTimeInstance().parse("2018-09-29 10:03:37")))
+                        .to(DateUtils.dateCSTToUTCString(SimpleDateFormat.getDateTimeInstance().parse("2018-09-29 10:03:40"))));
+
+//        RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery("created")
+//                .from(DateUtils.dateCSTToUTCString(SimpleDateFormat.getDateTimeInstance().parse("2018-09-29 10:03:37")))
+//                .to(DateUtils.dateCSTToUTCString(SimpleDateFormat.getDateTimeInstance().parse("2018-09-29 10:03:40")));
+
+        SearchRequestBuilder sv = transportClient.prepareSearch("open_response-2018-09-29")
                 .setTypes("doc").setQuery(qb).setFrom(from).setSize(size);
+        System.out.println(sv.toString());
         SearchResponse response = sv.get();
         SearchHits searchHits = response.getHits();
         long totalHits = searchHits.getHits().length;
