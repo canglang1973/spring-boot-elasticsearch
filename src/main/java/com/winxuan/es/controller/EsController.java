@@ -1,5 +1,6 @@
 package com.winxuan.es.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import com.winxuan.es.model.AppCountDetail;
 import com.winxuan.es.model.AppExceptionCountDetail;
 import com.winxuan.es.utils.DateUtils;
@@ -106,7 +107,9 @@ public class EsController {
         SearchHits searchHits = response.getHits();
         long totalHits = searchHits.getHits().length;
         for (SearchHit hit : searchHits.getHits()) {
-            System.out.println(hit.getSourceAsString());
+            String sourceAsString = hit.getSourceAsString();
+            Object parse = JSONObject.parse(sourceAsString);
+            System.out.println(sourceAsString);
         }
         return new ResponseEntity(totalHits, HttpStatus.OK);
     }
@@ -131,6 +134,13 @@ public class EsController {
         return new ResponseEntity(searchHits.getHits().length, HttpStatus.OK);
     }
 
+    /**
+     * 这段代码就相当于 sql select count(age) ageCount form accounts.person  where age >=30 and age<=30
+     * @param index
+     * @param appKey
+     * @param success
+     * @return
+     */
     @RequestMapping("/count2")
     public ResponseEntity count2(String index, String appKey, boolean success) {
         AggregationBuilder termsBuilder = AggregationBuilders.count("count").field("created");
